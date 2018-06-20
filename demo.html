@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>流程图z</title>
+	<link rel="stylesheet" type="text/css" href="./css/flow.css">
+</head>
+<body>
+	<div id="palette">
+		<div id="modules">
+			<ul>
+				<li class="module item">元素1</li>
+				<li class="module item">元素2</li>
+				<li class="module item">元素3</li>
+				<button id="save" class="btn">保存图片</button>
+				<button id="empty" class="btn">清空画板</button>
+				<button id="saveData" class="btn">序列化保存数据</button>
+			</ul>
+		</div>
+		<h2>自定义画板</h2>
+		<div id="paletteArea"></div>
+		<div id="show">
+			<div id="img"></div>
+			<div>
+				<h2>当前模板</h2>
+				<ul id="temList"></ul>
+			</div>
+		</div>
+		<div>
+		</div>
+	</div>
+</body>
+	<script type="text/javascript" src="./js/jquery-1.11.1.min.js"></script>
+	<script type="text/javascript" src="./js/jquery-ui-1.9.2.min.js"></script>
+	<script type="text/javascript" src="./js/canvg.js"></script>
+	<script type="text/javascript" src="./js/html2canvas.js"></script>
+	<script type="text/javascript" src="./js/jsPlumb.modify.js"></script>
+	<script type="text/javascript" src="./js/selectArea.js"></script>
+	<script type="text/javascript">
+	//画板功能
+		jsPlumb.ready(function(){
+			var allTmp = null;//全部模板
+			var templateData = null;//当前模板
+		    var instance = jsPlumb.getInstance({
+		      	Connector : [
+		      		"Flowchart", {
+			      		stub: [10, 10],
+			      		gap: 5,
+			      		cornerRadius: 5,
+			      		alwaysRespectStubs: true,
+			      	}
+		      	],
+		      	ConnectionOverlays: [//连接覆盖图
+		          	["Arrow", {
+		          		width : 15,
+		              	location: 1,
+		              	id: "arrow",
+		              	length: 10,
+		              	foldback: 1
+		          	}]
+		      	],
+		      	HoverPaintStyle: {stroke: "#189992", strokeWidth: 2 },
+		      	EndpointStyle : { radius:5, fillStyle:"#37bfb8" },
+		      	Container:"paletteArea"
+		    });
+			getTmp()
+			defaultTmp()
+			function getTmp(){
+				var url = '/getTmp';
+				$.get(url,function(res){
+					var data = JSON.parse(res);
+					var str = '';
+					for (var i = 0; i < data.tmp.length; i++) {
+						str += '<li>模板'+ (i+1) +'</li>';
+					}
+					$("#temList").html(str);
+					allTmp = data.tmp;
+					templateData = data.tmp[0];
+				})
+			}
+			function defaultTmp(){
+				var url = '/getTmp';
+				$.get(url,function(res){
+					var data = JSON.parse(res);
+					templateData = data.tmp[0];
+					renderTemplate()					
+				})
+			}
+			$("#temList").on("click","li",function(){
+				var index = $(this).index();
+				templateData = allTmp[index];
+				renderTemplate()
+			})
+			//渲染模板
+			$("#empty").click(function(){
+				$("#paletteArea").empty()
+			})
+			function renderTemplate(){
+				instance.reset();
+				$("#paletteArea").empty();
+				for (let i = 0; i < templateData.nodes.length; i++) {
+					var eachGraph = templateData.nodes[i];
+					var node = addItem("paletteArea",eachGraph.id,eachGraph.text,{x:eachGraph.left,y:eachGraph.top})
+					var anchorArr = ['Top','Right','Bottom','Left'];
+			        for (let m = 0; m < anchorArr.length + 1; m++) {
+			        	instance.addEndpoint(node, {
+			                uuid: node.attr("id") + anchorArr[m],
+			                anchor: anchorArr[m],
+			                maxConnections: -1,
+			                connectorStyle: {
+				            	stroke: "#37bfb8",
+				            	strokeWidth: 2,
+				            	outlineStroke: "transparent",
+				            	outlineWidth: 4
+		            		}
+			            })
+			        }
+			        // 渲染目标元素的断点个数，为简单考虑，元素上被连几天线，就初始化几个端点
+			        for (var j = 0; j < eachGraph.count; j++) {
+			        	instance.addEndpoint(node, {
+			                uuid: node.attr("id") + "Continuous" + String(j),
+			                anchor: "Continuous",
+			                maxConnections: -1,
+			                connectorStyle: {
+				            	stroke: "#37bfb8",
+				            	strokeWidth: 2,
+				            	outlineStroke: "transparent",
+				            	outlineWidth: 4
+		            		}
+			            })
+			        }
+				}
+		    	instance.batch(function (){
+			        var overlays = [[
+			        	"Arrow", {width : 15,location: 1,id: "arrow",length: 10,foldback: 1}
+			        	]];
+			        // 连线
+			        for (let i = 0; i < templateData.edges.length; i++) {
+			        	var eachLine = templateData.edges[i];
+			        	var targetLine = $("#"+eachLine.target).attr("line");
+			        	// 连线
+			        	instance.connect({uuids: [eachLine.source + eachLine.position,eachLine.target + "Continuous" + targetLine], overlays: overlays});
+			        	$("#" + eachLine.target).attr("line",Number(targetLine)+1);//目标元素连线数量+1
+			        }
+			    });
+			    // 给连线绑定点击事件,点击是删除此线
+			    instance.bind("click", function (c){
+			        instance.deleteConnection(c);
+			    });
+
+			    jsPlumb.fire("jsPlumbDemoLoaded", instance);
+		    }
+		    // 初始化端点
+		    function initNode(el) {
+		        instance.draggable(el);//元素可拖拽
+		        var anchorArr = ['Top','Right','Bottom','Left'];
+		        var anchorArr1 = ['.epTop','.epRight','.epBottom','.epLeft'];
+		        for (var i = 0; i < anchorArr.length; i++) {
+		        	instance.makeSource(el, {
+			            filter: anchorArr1[i],
+			            anchor: anchorArr[i],
+			            EndpointStyle : { radius:5, fillStyle:"#37bfb8"},
+			            connectorStyle: {
+			            	stroke: "#37bfb8",
+			            	strokeWidth: 2,
+			            	outlineStroke: "transparent",
+			            	outlineWidth: 4
+			            }
+			        });
+		        }
+		        instance.makeTarget(el, {
+		            dropOptions: { hoverClass: "dragHover" },
+		            anchor: "Continuous",
+		            allowLoopback: false
+		        });
+		        // 更新事件
+		        instance.fire("jsPlumbDemoNodeAdded", el);
+		    };
+		    // 创建元素
+			function addItem(parentId, nodeId, nodeLable, position){
+			   var panel = $("#" + parentId);
+			   var div = $('<div class="drawedItem"></div>');
+			   div.css('width','100px').css('height','50px').css('line-height','50px')
+			    .css('background','#f3f8fe').css('position','absolute')
+			    .css('top',position.y).css('left',position.x)
+			    .css('border','1px solid #dcdfe6').attr('align','center')
+			    .attr('id',nodeId).attr('node',true).attr("line",0)//line:当前元素被连线数量
+			    .html(nodeLable + '<div class="ep epTop"></div><div class="ep epRight"></div><div class="ep epBottom"></div><div class="ep epLeft"></div>');
+			    panel.append(div)
+			    initNode(div);
+			    return div;
+			}
+		    // 将模块拖入画板中
+ 			$(".module").draggable({
+		      	appendTo: "body",
+		      	helper: "clone"
+		    });
+		    $("#paletteArea").droppable({
+		    	drop : function(ev,ui){
+		    		if(ui.draggable.hasClass("item")){
+				      	ev.preventDefault();
+				      	ev.stopPropagation();
+				      	var mx = '' + ui.position.left + 'px';
+				      	var my = '' + ui.position.top + 'px'; 	
+				      	var txt = ui.draggable.text();
+				      	var uid = new Date().getTime();
+				      	addItem('paletteArea','node' + uid, txt, {x:mx,y:my});
+		    		}
+		    	}
+		    });
+		    // 判断对象属性个数
+		    function objAttributeCount(obj){
+		    	var count = 0;
+		        for(var i in obj) {
+		            if(obj.hasOwnProperty(i)) {
+		                count++;
+		            }
+		        }
+		        return count;
+		    }
+		    // 保存成数据结构
+		    $("#saveData").click(function(){
+		    	var nodes = [];
+		    	var edges = [];
+				$.each(instance.getAllConnections(),function(i,el){
+					edges.push({
+						"source" : el.sourceId,
+						"target" : el.targetId,
+						"position" : el.endpoints[0].anchor.type
+					})
+				})
+
+				$.each($("#paletteArea .drawedItem"),function(ind,el){
+					console.log($(el))
+					if(el.hasOwnProperty("_jsPlumbConnections")){
+						var count = Number(objAttributeCount(el._jsPlumbConnections))
+					}else{
+						var count = null
+					}
+					nodes.push({
+						"id" : el.id,
+						"text" : el.innerText,
+						"left" : el.style.left,
+						"top" : el.style.top,
+						"count" : count
+					})
+				})
+				var data = {
+					nodes : nodes,
+					edges : edges
+				}
+				$.get('/addList',data,function(res){
+					getTmp()
+				})
+		    })
+		});
+		//保存图片功能
+		$("#save").click(function(){
+			var nodesToRecover = [];
+			var $svgElem = $("#paletteArea").find('svg');
+			$svgElem.each(function(index, node) {
+				var parentNode = node.parentNode;
+				var left = $(node).css("left")
+				var top = $(node).css("top")
+				var canvas = $("<canvas></canvas>")[0];
+				canvg(canvas, node.outerHTML, {ignoreMouse: true, ignoreAnimation: true});
+				//将svg转换成canvas
+				nodesToRecover.push({
+				    parent: parentNode,
+				    svg: node,
+				    canvas: canvas
+				});
+				$(node).remove();
+			   	$(canvas).css({"position":"absolute","left":left,"top":top})
+			   	$(parentNode).append(canvas);
+			});
+	        html2canvas($("#paletteArea")).then(function(canvas) { 
+	             var imgUri = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream"); // 获取生成的图片的url  
+	             // console.log(imgUri)
+	             $("#img").append('<img src="'+imgUri +'"/>')
+	        });
+	        // 把原图的canvas转换为svg
+	        for (var i = 0; i < nodesToRecover.length; i++) {
+	        	var parent = nodesToRecover[i].parent;
+	        	var svg = nodesToRecover[i].svg;
+	        	$(parent).append(svg);
+	        	nodesToRecover[i].canvas.remove();
+	        }
+	    });
+	    // Ctrl+C/V
+	    $(window).on("keydown",function(event){
+	        if(event.ctrlKey){
+	            if(event.keyCode == 67){
+	                console.log("你使用了Ctrl+C组合件功能！");
+	                event.keyCode = 0;
+	                console.log(event.keyCode)
+	            }
+	            if(event.keyCode == 86){
+					console.log("ctrl+v")
+					console.log(event.keyCode)       
+	            }
+	        }
+	    })
+	    // 期望传给后台的数据，需要确定一个起点
+	    var s ={
+			id : "node1523516410259",
+			child : [
+				{
+					id:"node1523516411731",
+					child :[]
+				},{
+					id:"node1523516413054",
+					child :[
+						{
+							id:"node1523521680994",
+							child :[]
+						}
+					]
+				},{
+					id:"node1523521680994",
+					child :[]
+				}]
+		}
+	</script>
+</html>

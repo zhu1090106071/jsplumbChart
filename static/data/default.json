@@ -1,0 +1,58 @@
+{
+  "tmp": [
+    {
+      "nodes": [
+        {
+          "id": "node1523516410259",
+          "text": "开始",
+          "left": "27px",
+          "top": "175px",
+          "count": 3
+        },
+        {
+          "id": "node1523516411731",
+          "text": "方式一",
+          "left": "251px",
+          "top": "125px",
+          "count": 1
+        },
+        {
+          "id": "node1523516413054",
+          "text": "方式二",
+          "left": "244px",
+          "top": "253px",
+          "count": 2
+        },
+        {
+          "id": "node1523521680994",
+          "text": "方式三",
+          "left": "89.7831px",
+          "top": "341px",
+          "count": 2
+        }
+      ],
+      "edges": [
+        {
+          "source": "node1523516410259",
+          "target": "node1523516411731",
+          "position": "Right"
+        },
+        {
+          "source": "node1523516410259",
+          "target": "node152351641305 4",
+          "position": "Right"
+        },
+        {
+          "source": "node1523516410259",
+          "target": "node1523521680994",
+          "position": "Bottom"
+        },
+        {
+          "source": "node1523516413054",
+          "target": "node1523521680994",
+          "position": "Bottom"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>转换</title>
+</head>
+<body>
+	
+</body>
+	<script type="text/javascript">
+		var arr = [
+	        {
+	          "source": "node1528100740964",
+	          "target": "node1528100742379",
+	          "position": "Right"
+	        },
+	        {
+	          "source": "node1528100740964",
+	          "target": "node1528100744844",
+	          "position": "Right"
+	        },
+	        {
+	          "source": "node1528100740964",
+	          "target": "node1528100746356",
+	          "position": "Bottom"
+	        },
+	        {
+	          "source": "node1528100744844",
+	          "target": "node1528100748102",
+	          "position": "Right"
+	        },
+	        {
+	          "source": "node1528100742379",
+	          "target": "node1528100748102",
+	          "position": "Right"
+	        },
+	        {
+	          "source": "node1528100748102",
+	          "target": "node1528100750114",
+	          "position": "Bottom"
+	        },
+	        {
+	          "source": "node1528100748102",
+	          "target": "node1528100752591",
+	          "position": "Right"
+	        },
+	        {
+	          "source": "node1528100752591",
+	          "target": "node1528100754214",
+	          "position": "Right"
+	        },
+	        {
+	          "source": "node1528100752591",
+	          "target": "node1528100750114",
+	          "position": "Bottom"
+	        }
+	    ]
+	    change(arr)
+		function change(arr){
+			var newArr = arr;
+			var data = {//默认的开始
+				id : "node1528100740964",
+				child :[]
+			}
+			for (let i = 0; i < newArr.length; i++){
+				if(newArr[i].source == data.id){
+					let obj = {
+						id : newArr[i].target,
+						child : []
+					}
+					data.child.push(obj);
+					newArr.splice(i,1);
+					i--;
+				}
+			}
+			traverseChild(newArr,data.child)
+		}
+		// 递归遍历child
+		function traverseChild(arr,child){
+			for (let i = 0; i < arr.length; i++) {
+				for (let j = 0; j < child.length; j++){
+					if(child[j].id == arr[i].source){
+						let obj = {
+							id : arr[i].target,
+							child : []
+						}
+						child[j].child.push(obj);
+						var curChild = child[j].child;
+						traverseChild(arr,curChild);
+					}
+				}
+			}
+		}	
+	</script>
+</html>
